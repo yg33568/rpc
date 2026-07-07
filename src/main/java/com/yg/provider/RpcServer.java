@@ -4,15 +4,16 @@
  * 提供查询：别人给一个服务名字，能从电话簿里找到对应的实例。
  */
 
-
 package com.yg.provider;
 
 import com.yg.api.UserService;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+@Component
 public class RpcServer {
 
 
@@ -30,11 +31,11 @@ public class RpcServer {
 
     }
 
-    public static void main(String[] args) {
-        RpcServer server=new RpcServer();
-        UserService service=(UserService)server.getService("com.yg.api.UserService");
-        service.sayHello("小王");
-    }
+//    public static void main(String[] args) {
+//        RpcServer server=new RpcServer();
+//        UserService service=(UserService)server.getService("com.yg.api.UserService");
+//        service.sayHello("小王");
+//    }
 
 }
 
