@@ -1,9 +1,10 @@
 package com.yg.provider;
 
 import com.yg.api.UserService;
-
+//实现UserService接口
 public class UserServiceImpl implements UserService {
 
+    //重写sayHello方法
     @Override
     public String sayHello(String name) {
         System.out.println("服务端收到调用，参数：" + name);
