@@ -11,15 +11,12 @@
  */
 package com.yg.controller;
 
+import com.yg.common.RpcRequest;
+import com.yg.common.RpcResponse;
 import com.yg.provider.RpcServer;
-import org.aopalliance.intercept.Invocation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 @RestController
@@ -27,22 +24,30 @@ public class RpcController {
     @Autowired
     private RpcServer rpcServer;
 
-    @GetMapping("/rpc")
+    @PostMapping("/rpc")
     //Spring MVC（Tomcat）根据URL自动传三个参数
-    public String invoke(
-        @RequestParam("interfaceName") String interfaceName,
-        @RequestParam("methodName") String methodName,
-        @RequestParam("param") String param) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        //通过getService(interfaceName)找到实现类的实例
-        Object service=rpcServer.getService(interfaceName);
 
-        //用反射找到对应的方法
-        // service 的 Class 是 UserServiceImpl，它里面有 sayHello方法
-        Method method=service.getClass().getMethod(methodName, String.class);
+    public RpcResponse invoke(
+        @RequestBody RpcRequest request) throws Exception{
+            //通过getService(interfaceName)找到实现类的实例
+        Object inv= null;
+        try {
+            Object service=rpcServer.getService(request.getInterfaceName());
 
-        //调用invoke这个方法
-        //第一个参数是"哪个对象"（实例），第二个参数是"传给方法的参数值"
-        Object inv=method.invoke(service,param);
-        return (String)inv;
+            //用反射找到对应的方法
+            // service 的 Class 是 UserServiceImpl，它里面有 sayHello方法
+            Method method=service.getClass().getMethod(request.getMethodName(), request.getParamTypes());
+
+            //调用invoke这个方法
+            //第一个参数是"哪个对象"（实例），第二个参数是"传给方法的参数值"
+            Object result = method.invoke(service, request.getParams());
+
+            // 成功：返回 data
+            return RpcResponse.success(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 失败：返回错误信息
+            return RpcResponse.error(e.getMessage());
+        }
     }
 }

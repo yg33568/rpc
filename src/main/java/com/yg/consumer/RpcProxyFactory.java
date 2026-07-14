@@ -1,66 +1,74 @@
-/**
- * 生成代理对象
- * 接收一个接口的 Class 对象（比如 UserService.class）
- * 用 JDK 的动态代理生成一个"代理实例"返回
- *
- * 有了代理对象，就可以不用在url上写完整参数了
- * 代理对象自动帮你把 interfaceName、methodName、param 拼成 URL
- */
 package com.yg.consumer;
 
-import com.yg.api.UserService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yg.common.RpcRequest;
 
-import java.lang.reflect.InvocationHandler;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Proxy;
+import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 
 public class RpcProxyFactory {
 
-    public static <T> T getProxy(Class<T> interfaceClass){
+    private static final String RPC_URL = "http://127.0.0.1:8080/rpc";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
-        InvocationHandler handler = (proxy, method, args) -> {
-            try {
-                // 获取方法名
-                String methodName = method.getName();
-                // 获取第一个参数（假设只有一个参数）
-                String param = java.net.URLEncoder.encode((String) args[0], "UTF-8");
-                // 拼 URL
-                String url = "http://localhost:8080/rpc?interfaceName="
-                        + interfaceClass.getName()
-                        + "&methodName=" + methodName
-                        + "&param=" + param;
-                // 发 HTTP 请求（这里你要用 HttpURLConnection 发 GET 请求）
-                // 假设你写了一个 sendGet 方法
-                return sendGet(url);
-            } catch (Exception e) {
-                throw new RuntimeException("远程调用失败", e);
-            }
-        };
-
-        // 创建代理对象
+    @SuppressWarnings("unchecked")
+    public static <T> T getProxy(Class<T> interfaceClass) {
         return (T) Proxy.newProxyInstance(
-                interfaceClass.getClassLoader(),  // 固定写法
-                new Class[]{interfaceClass},      // 告诉 Java 这个代理能当 UserService 用
-                handler                           // 工作手册
+                interfaceClass.getClassLoader(),
+                new Class[]{interfaceClass},
+                (proxy, method, args) -> {
+                    // 1. 封装请求
+                    RpcRequest request = new RpcRequest();
+                    request.setInterfaceName(interfaceClass.getName());
+                    request.setMethodName(method.getName());
+                    request.setParamTypes(method.getParameterTypes());
+                    request.setParams(args);
+
+                    // 2. 转成 JSON
+                    String jsonReq = MAPPER.writeValueAsString(request);
+
+                    // 3. 发送 POST 请求
+                    HttpURLConnection conn = (HttpURLConnection) new java.net.URL(RPC_URL).openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+                    conn.setDoOutput(true);
+
+                    try (OutputStream out = conn.getOutputStream()) {
+                        out.write(jsonReq.getBytes(StandardCharsets.UTF_8));
+                    }
+
+                    // 4. 读取响应
+                    int responseCode = conn.getResponseCode();
+                    InputStream inputStream = (responseCode == 200)
+                            ? conn.getInputStream()
+                            : conn.getErrorStream();
+
+                    // 5. 用 JsonNode 手动解析
+                    JsonNode root = MAPPER.readTree(inputStream);
+                    inputStream.close();
+                    conn.disconnect();
+
+                    // 检查业务状态码
+                    int code = root.get("code").asInt();
+                    if (code != 0) {
+                        String errMsg = root.get("message").asText();
+                        throw new RuntimeException("远程调用失败：" + errMsg);
+                    }
+
+                    // 取 data 字段，转成字符串返回
+                    JsonNode dataNode = root.get("data");
+                    if (dataNode == null || dataNode.isNull()) {
+                        return null;
+                    }
+                    if (dataNode.isTextual()) {
+                        return dataNode.asText();  // 如果 data 是字符串，直接返回
+                    }
+                    return dataNode.toString();     // 如果 data 是对象，转成 JSON 字符串
+                }
         );
     }
-
-    // 辅助方法：发 HTTP GET 请求，返回响应字符串
-    private static String sendGet(String url) throws Exception {
-        java.net.URL obj = new java.net.URL(url);
-        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) obj.openConnection();
-        conn.setRequestMethod("GET");
-
-        // 读取响应
-        java.io.BufferedReader in = new java.io.BufferedReader(
-                new java.io.InputStreamReader(conn.getInputStream(), "UTF-8")
-        );
-        String inputLine;
-        StringBuilder response = new StringBuilder();
-        while ((inputLine = in.readLine()) != null) {
-            response.append(inputLine);
-        }
-        in.close();
-        return response.toString();
-    }
-
 }
