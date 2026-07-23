@@ -11,17 +11,17 @@ import java.io.Serializable;
 public class RpcRequest implements Serializable {
     private String interfaceName;
     private String methodName;
-    private Class<?>[] paramTypes;
+    private String[] paramTypeNames;
     private Object[] params;
 
     public RpcRequest() {
     }
 
-    public RpcRequest(String interfaceName, String methodName, Object[] params, Class<?>[] paramTypes) {
+    public RpcRequest(String interfaceName, String methodName, Object[] params, String[] paramTypeNames) {
         this.interfaceName = interfaceName;
         this.methodName = methodName;
         this.params = params;
-        this.paramTypes = paramTypes;
+        this.paramTypeNames = paramTypeNames;
     }
 
     public String getInterfaceName() {
@@ -48,11 +48,11 @@ public class RpcRequest implements Serializable {
         this.params = params;
     }
 
-    public Class<?>[] getParamTypes() {
-        return paramTypes;
+    public String[]  getParamTypeNames() {
+        return paramTypeNames;
     }
 
-    public void setParamTypes(Class<?>[] paramTypes) {
-        this.paramTypes = paramTypes;
+    public void setParamTypeNames(String[]  paramTypeNames) {
+        this.paramTypeNames = paramTypeNames;
     }
 }

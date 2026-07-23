@@ -25,23 +25,23 @@ public class RpcController {
     private RpcServer rpcServer;
 
     @PostMapping("/rpc")
-    //Spring MVC（Tomcat）根据URL自动传三个参数
-
-    public RpcResponse invoke(
-        @RequestBody RpcRequest request) throws Exception{
-            //通过getService(interfaceName)找到实现类的实例
-        Object inv= null;
+    public RpcResponse invoke(@RequestBody RpcRequest request) {
         try {
-            Object service=rpcServer.getService(request.getInterfaceName());
-
+            Object service = rpcServer.getService(request.getInterfaceName());
+            if (service == null) {
+                return RpcResponse.error("找不到服务：" + request.getInterfaceName());
+            }
+            String[] paramTypeNames = request.getParamTypeNames();
+            Class<?>[] paramTypes = new Class<?>[paramTypeNames.length];
+            for (int i = 0; i < paramTypeNames.length; i++) {
+                paramTypes[i] = getClassByName(paramTypeNames[i]);
+            }
             //用反射找到对应的方法
             // service 的 Class 是 UserServiceImpl，它里面有 sayHello方法
-            Method method=service.getClass().getMethod(request.getMethodName(), request.getParamTypes());
-
+            Method method = service.getClass().getMethod(request.getMethodName(), paramTypes);
             //调用invoke这个方法
             //第一个参数是"哪个对象"（实例），第二个参数是"传给方法的参数值"
             Object result = method.invoke(service, request.getParams());
-
             // 成功：返回 data
             return RpcResponse.success(result);
         } catch (Exception e) {
@@ -49,5 +49,19 @@ public class RpcController {
             // 失败：返回错误信息
             return RpcResponse.error(e.getMessage());
         }
+    }
+
+    private Class<?> getClassByName(String className) throws ClassNotFoundException {
+        return switch (className) {
+            case "int" -> int.class;
+            case "boolean" -> boolean.class;
+            case "byte" -> byte.class;
+            case "short" -> short.class;
+            case "long" -> long.class;
+            case "float" -> float.class;
+            case "double" -> double.class;
+            case "char" -> char.class;
+            default -> Class.forName(className);
+        };
     }
 }

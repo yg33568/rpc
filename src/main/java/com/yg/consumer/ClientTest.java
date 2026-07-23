@@ -7,7 +7,7 @@ public class ClientTest {
     public static void main(String[] args) {
         UserService userService=RpcProxyFactory.getProxy(UserService.class);
         String result=userService.sayHello("小王");
-       // String result=userService.getUserInfo("小刘",20,"西安");
+        //String result=userService.getUserInfo("小刘",20,"西安");
         System.out.println(result);
 
     }

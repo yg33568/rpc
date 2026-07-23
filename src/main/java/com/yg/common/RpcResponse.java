@@ -1,6 +1,9 @@
 package com.yg.common;
 
-public class RpcResponse {
+import java.io.Serializable;
+
+public class RpcResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
     // 状态码：0表示成功，非0表示失败
     private int code;
     // 错误信息（成功时为空）

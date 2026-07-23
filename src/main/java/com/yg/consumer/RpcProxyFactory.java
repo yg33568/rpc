@@ -25,7 +25,13 @@ public class RpcProxyFactory {
                     RpcRequest request = new RpcRequest();
                     request.setInterfaceName(interfaceClass.getName());
                     request.setMethodName(method.getName());
-                    request.setParamTypes(method.getParameterTypes());
+
+                    Class<?>[] paramTypes = method.getParameterTypes();
+                    String[] paramTypeNames = new String[paramTypes.length];
+                    for (int i = 0; i < paramTypes.length; i++) {
+                        paramTypeNames[i] = paramTypes[i].getName();
+                    }
+                    request.setParamTypeNames(paramTypeNames);
                     request.setParams(args);
 
                     // 2. 转成 JSON
@@ -36,6 +42,9 @@ public class RpcProxyFactory {
                     conn.setRequestMethod("POST");
                     conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
                     conn.setDoOutput(true);
+                    // 增加超时，防止程序卡死
+                    conn.setConnectTimeout(5000);
+                    conn.setReadTimeout(5000);
 
                     try (OutputStream out = conn.getOutputStream()) {
                         out.write(jsonReq.getBytes(StandardCharsets.UTF_8));
